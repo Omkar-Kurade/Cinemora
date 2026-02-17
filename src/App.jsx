@@ -6,7 +6,7 @@ import Spinner from "./components/spinner";
 import MovieCard from "./components/movieCard";
 import LightRays from "./components/lightRays";
 import { getTrendingMovies, updateSearchCount } from "./appwrite";
-
+import Pagination from "./components/pagination";
 
 const API_BASE_URL = "https://api.themoviedb.org/3";
 const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
@@ -18,18 +18,27 @@ const API_OPTIONS = {
     Authorization: `Bearer ${API_KEY}`,
   },
 };
+
 function App() {
   const [searchTerm, setSearchTerm] = useState("");
-
   const [errorMessage, setErrorMessage] = useState("");
-  const [movieList, SetMovieList] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  const [debounceSearchTerm, setDebounceSearchTerm] = useState()
+  const [movieList, SetMovieList] = useState([]);
 
-  const [trendingMovies, setTrendingMovies] = useState([])
+  const [currentPage, setCurrentPage] = useState(1);
+  const [postPerpage, setPostPerPage] = useState(8);
 
-  useDebounce(() => setDebounceSearchTerm(searchTerm), 500, [searchTerm])
+  const [debounceSearchTerm, setDebounceSearchTerm] = useState();
+
+  const [trendingMovies, setTrendingMovies] = useState([]);
+
+  useDebounce(() => setDebounceSearchTerm(searchTerm), 500, [searchTerm]);
+
+  const lastPostIndex = currentPage * postPerpage
+  const firstPostIndex = lastPostIndex - postPerpage
+
+  const currentmovies = movieList.slice(firstPostIndex , lastPostIndex)
 
   const fetchMovies = async (query = "") => {
     setIsLoading(true);
@@ -53,40 +62,35 @@ function App() {
       SetMovieList(data.results || []);
 
       if (query && data.results.length > 0) {
-        await updateSearchCount(query, data.results[0])
-
-
+        await updateSearchCount(query, data.results[0]);
       }
-
     } catch (error) {
       console.error(`Error in fetching Movies : ${error}`);
       setErrorMessage("Error fetching movies.Please try again later.");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
   };
 
   const loadTrendingMovies = async () => {
     try {
-      const movies = await getTrendingMovies()
-      setTrendingMovies(movies)
+      const movies = await getTrendingMovies();
+      setTrendingMovies(movies);
     } catch (error) {
-      console.error(`Error fetching trending Movies : ${error}`)
-
+      console.error(`Error fetching trending Movies : ${error}`);
     }
-  }
+  };
 
   useEffect(() => {
-
     fetchMovies(debounceSearchTerm);
   }, [debounceSearchTerm]);
 
   useEffect(() => {
-    loadTrendingMovies()
-  }, [])
+    loadTrendingMovies();
+  }, []);
 
   return (
-    <main className="relative min-h-screen bg-black"  >
+    <main className="relative min-h-screen bg-black">
       <div className="absolute inset-0 z-0 pointer-events-none">
         <LightRays
           raysOrigin="top-center"
@@ -112,10 +116,10 @@ function App() {
             Effortlessly
           </h1>
         </header>
-         <Search searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
+        <Search searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
         {trendingMovies.length > 0 && (
           <section className="trending font-luckiest-guy">
-            <h2 >Trending Movies</h2>
+            <h2>Trending Movies</h2>
             <ul>
               {trendingMovies.map((movie, index) => (
                 <li key={movie.$id}>
@@ -135,38 +139,56 @@ function App() {
             <p className="text-red-500">{errorMessage}</p>
           ) : (
             <ul>
-              {movieList.map((movie) => (
+              {currentmovies.map((movie) => (
                 <MovieCard key={movie.id} movie={movie} />
+                
               ))}
             </ul>
           )}
+          <Pagination totalPosts={movieList.length} postsPerPages={postPerpage} setCurrentPost={setCurrentPage} currentPage={currentPage}></Pagination>
         </section>
       </div>
-
 
       <footer className="bg-neutral-primary-soft rounded-base shadow-xs border border-default m-4 font-luckiest-guy">
         <div className="w-full max-w-7xl mx-auto p-4 md:py-8">
           <div className="sm:flex sm:items-center sm:justify-between ">
-            <a href="#" className="flex items-center mb-4 sm:mb-0 space-x-3 rtl:space-x-reverse text-gray-600">
+            <a
+              href="#"
+              className="flex items-center mb-4 sm:mb-0 space-x-3 rtl:space-x-reverse text-gray-600"
+            >
               <img src="./logo.png" class="h-7" />
-              <span class="text-heading self-center text-2xl font-semibold whitespace-nowrap">Cinemora</span>
+              <span class="text-heading self-center text-2xl font-semibold whitespace-nowrap">
+                Cinemora
+              </span>
             </a>
             <ul className="flex flex-wrap items-center mb-6 text-sm font-medium text-body sm:mb-0  text-gray-600">
               <li>
-                <a href="https://github.com/Omkar-Kurade/Cinemora" target="_blank" className="hover:underline me-4 md:me-6">Github</a>
+                <a
+                  href="https://github.com/Omkar-Kurade/Cinemora"
+                  target="_blank"
+                  className="hover:underline me-4 md:me-6"
+                >
+                  Github
+                </a>
               </li>
               <li>
-                <a href="https://linkedin.com/in/omkar-kurade-054668223" target="_blank" className="hover:underline">LinkedIn</a>
+                <a
+                  href="https://linkedin.com/in/omkar-kurade-054668223"
+                  target="_blank"
+                  className="hover:underline"
+                >
+                  LinkedIn
+                </a>
               </li>
             </ul>
           </div>
           <hr className="my-6 border-defaul border-gray-500 t sm:mx-auto lg:my-8" />
-          <span className="block text-sm text-body sm:text-center text-gray-600">© 2025</span>
+          <span className="block text-sm text-body sm:text-center text-gray-600">
+            © 2025
+          </span>
         </div>
       </footer>
-
     </main>
-
   );
 }
 
